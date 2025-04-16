@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  dev-database:
+    image: postgres:17.4
+    container_name: it-clone-api
+    ports:
+      - '5453:5432'
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Abc123456
+      POSTGRES_DB: it-clone-api  
+    networks:
+      - nestjs-network   
+
+networks:
+  nestjs-network:
+    driver: bridge

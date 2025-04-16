@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum cho các loại vai trò cố định trong hệ thống
+enum RoleType {
+  ADMIN
+  EMPLOYER
+  CANDIDATE
+  MODERATOR
+  VISITOR
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Quan hệ RBAC
+  roles UserRole[]
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        RoleType @unique // Sử dụng enum để đảm bảo tính nhất quán
+  description String?
+
+  // Quan hệ RBAC
+  users       UserRole[]
+  permissions RolePermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Permission {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  code        String  @unique // Mã code để kiểm tra quyền trong code dễ dàng hơn
+  description String?
+
+  // Quan hệ RBAC
+  roles RolePermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UserRole {
+  id     String @id @default(uuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  roleId String
+
+  assignedAt DateTime @default(now())
+  assignedBy String? // ID của người gán vai trò (nếu có)
+
+  @@unique([userId, roleId]) // Mỗi người dùng chỉ có 1 bản ghi duy nhất cho mỗi vai trò
+  @@index([userId])
+  @@index([roleId])
+}
+
+model RolePermission {
+  id           String     @id @default(uuid())
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  roleId       String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  permissionId String
+
+  assignedAt DateTime @default(now())
+
+  @@unique([roleId, permissionId]) // Mỗi vai trò chỉ có 1 bản ghi duy nhất cho mỗi quyền
+  @@index([roleId])
+  @@index([permissionId])
+}
