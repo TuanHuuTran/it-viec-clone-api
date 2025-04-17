@@ -1,7 +1,8 @@
-import { Catch, ExceptionFilter, ArgumentsHost, HttpException, HttpStatus, Logger } from "@nestjs/common";
+import { Catch, ExceptionFilter, ArgumentsHost, HttpException, HttpStatus, Logger, UnauthorizedException } from "@nestjs/common";
 import { Response } from 'express';
 import { Prisma } from '@prisma/client';
 import { ValidationError } from 'class-validator';
+import { JsonWebTokenError, TokenExpiredError, NotBeforeError } from 'jsonwebtoken';
 
 interface ErrorResponse {
   statusCode: number;
@@ -30,8 +31,30 @@ export class AllExceptionsFilter implements ExceptionFilter {
       path: path
     };
 
+    // Handle JWT specific errors
+    if (this.isJwtError(exception)) {
+      errorResponse = this.handleJwtError(exception, path);
+    }
+    // Handle UnauthorizedException (which often wraps JWT errors)
+    else if (exception instanceof UnauthorizedException) {
+      const status = exception.getStatus();
+      const exceptionResponse = exception.getResponse() as any;
+
+      // Check if this is a JWT-related unauthorized error
+      if (exception.cause && this.isJwtError(exception.cause)) {
+        errorResponse = this.handleJwtError(exception.cause, path);
+      } else {
+        errorResponse = {
+          statusCode: status,
+          message: exceptionResponse.message || 'Authentication failed',
+          error: 'Unauthorized',
+          timestamp: new Date().toISOString(),
+          path: path
+        };
+      }
+    }
     // Handle HttpException
-    if (exception instanceof HttpException) {
+    else if (exception instanceof HttpException) {
       const status = exception.getStatus();
       const exceptionResponse = exception.getResponse() as any;
 
@@ -58,7 +81,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         };
       }
     }
-    // Handle raw Validation Errors (though usually caught by the section above)
+    // Handle raw Validation Errors
     else if (exception.message?.message instanceof Array &&
       exception.message.message[0] instanceof ValidationError) {
 
@@ -87,6 +110,41 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     // Send the error response
     response.status(errorResponse.statusCode).json(errorResponse);
+  }
+
+  private isJwtError(error: any): boolean {
+    return (
+      error instanceof JsonWebTokenError ||
+      error instanceof TokenExpiredError ||
+      error instanceof NotBeforeError ||
+      (error && error.name &&
+        ['JsonWebTokenError', 'TokenExpiredError', 'NotBeforeError'].includes(error.name))
+    );
+  }
+
+  private handleJwtError(exception: any, path: string): ErrorResponse {
+    let message = 'Authentication failed';
+    let error = 'JWT Authentication Error';
+
+    // Provide more specific messages based on the JWT error type
+    if (exception instanceof TokenExpiredError || exception.name === 'TokenExpiredError') {
+      message = 'JWT token has expired';
+      error = 'Token Expired';
+    } else if (exception instanceof NotBeforeError || exception.name === 'NotBeforeError') {
+      message = 'JWT token not active yet';
+      error = 'Token Not Active';
+    } else if (exception instanceof JsonWebTokenError || exception.name === 'JsonWebTokenError') {
+      message = 'Invalid JWT token';
+      error = 'Invalid Token';
+    }
+
+    return {
+      statusCode: HttpStatus.UNAUTHORIZED,
+      message,
+      error,
+      timestamp: new Date().toISOString(),
+      path
+    };
   }
 
   private formatValidationErrors(errors: ValidationError[]): string[] {

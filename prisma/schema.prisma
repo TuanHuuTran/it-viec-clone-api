@@ -17,12 +17,13 @@ enum RoleType {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(uuid())
+  email        String   @unique
+  password     String
+  name         String
+  tokenVersion Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Quan hệ RBAC
   roles UserRole[]
@@ -32,7 +33,7 @@ model User {
 
 model Role {
   id          String   @id @default(uuid())
-  name        RoleType @unique // Sử dụng enum để đảm bảo tính nhất quán
+  name        RoleType @unique @default(CANDIDATE) // Sử dụng enum để đảm bảo tính nhất quán
   description String?
 
   // Quan hệ RBAC
