@@ -1,6 +1,9 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { loginDTO, registerDTO } from './dto';
+import { GetUser } from './decorator/auth.decorator';
+import { User } from '@prisma/client';
+import { JwtRefreshGuard } from './guards/jwt-refreshToken.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -13,6 +16,14 @@ export class AuthController {
   @Post("login")
   async login(@Body() loginDTO: loginDTO) {
     return await this.authService.login(loginDTO)
+  }
+
+
+  @UseGuards(JwtRefreshGuard)
+  @Post("refresh")
+
+  async refreshToken(@GetUser() payload: any) {
+    return await this.authService.refreshToken(payload)
   }
 
 }
