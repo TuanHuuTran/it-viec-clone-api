@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma-client"
 }
 
 datasource db {
@@ -27,6 +26,8 @@ model User {
 
   // Quan hệ RBAC
   roles UserRole[]
+
+  @@map("users")
 }
 
 model Role {
@@ -40,6 +41,8 @@ model Role {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("roles")
 }
 
 model Permission {
@@ -53,6 +56,8 @@ model Permission {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("permissions")
 }
 
 model UserRole {
@@ -68,10 +73,11 @@ model UserRole {
   @@unique([userId, roleId]) // Mỗi người dùng chỉ có 1 bản ghi duy nhất cho mỗi vai trò
   @@index([userId])
   @@index([roleId])
+  @@map("role_users")
 }
 
 model RolePermission {
-  id           String     @id @default(uuid())
+  id           String     @id @default(uuid()) @map("id")
   role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   roleId       String
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
@@ -82,4 +88,5 @@ model RolePermission {
   @@unique([roleId, permissionId]) // Mỗi vai trò chỉ có 1 bản ghi duy nhất cho mỗi quyền
   @@index([roleId])
   @@index([permissionId])
+  @@map("role_permissions")
 }
