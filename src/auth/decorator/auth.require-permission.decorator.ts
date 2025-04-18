@@ -4,7 +4,7 @@ export type PermissionType =
   | 'jobs:create' | 'jobs:read' | 'jobs:update' | 'jobs:delete'
   | 'applications:read' | 'applications:process' | 'applications:create'
   | 'users:read'
-  | 'content:moderate';
+  | 'content:moderate' | 'users:create' | 'users:update';
 
 export const RequirePermission = (...permissions: PermissionType[]) =>
   SetMetadata('permissions', permissions);

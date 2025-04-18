@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt'
 import { loginDTO, registerDTO } from './dto';
@@ -30,13 +30,13 @@ export class AuthService {
       }
     })
 
+    const roleId = await this.checkRole(RoleType.CANDIDATE)
     await this.prismaService.userRole.create({
       data: {
         userId: user.id,
-        roleId: await this.getDefaultRoleId(),
-      },
-    });
-
+        roleId: roleId
+      }
+    })
 
     const { password, ...result } = user
     return result
@@ -44,7 +44,14 @@ export class AuthService {
 
   async login(loginDTO: loginDTO) {
     const user = await this.prismaService.user.findUnique({
-      where: { email: loginDTO.email }
+      where: { email: loginDTO.email },
+      include: {
+        roles: {
+          include: {
+            role: true
+          }
+        }
+      }
     })
 
     if (!user) {
@@ -91,6 +98,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
+        roles: user.roles
       },
     };
 
@@ -125,18 +133,46 @@ export class AuthService {
       },
     };
   }
-
-  private async getDefaultRoleId(): Promise<string> {
-    const role = await this.prismaService.role.findUnique({
-      where: {
-        name: RoleType.CANDIDATE,
-      },
-    });
-
-    if (!role) {
-      throw new InternalServerErrorException('Default role not found');
+  async checkRole(name: RoleType): Promise<string> {
+    if (!Object.values(RoleType).includes(name)) {
+      throw new BadRequestException(`Invalid role: "${name}". Must be one of: ${Object.values(RoleType).join(', ')}`);
     }
 
-    return role.id;
+    const existingRole = await this.prismaService.role.findUnique({
+      where: { name: name },
+      select: { id: true }
+    });
+
+    if (existingRole) {
+      return existingRole.id;
+    }
+
+    const newRole = await this.prismaService.role.create({
+      data: {
+        name: name,
+        description: this.getRoleDescription(name)
+      },
+      select: { id: true }
+    });
+
+    return newRole.id;
   }
+
+  private getRoleDescription(role: RoleType): string {
+    switch (role) {
+      case RoleType.ADMIN:
+        return 'System administrator with full access';
+      case RoleType.EMPLOYER:
+        return 'Employer who can post jobs and review applications';
+      case RoleType.CANDIDATE:
+        return 'Job seeker who can apply for jobs';
+      case RoleType.MODERATOR:
+        return 'Content moderator with limited administrative access';
+      case RoleType.VISITOR:
+        return 'Basic visitor with limited access';
+      default:
+        return 'Role with custom permissions';
+    }
+  }
+
 }

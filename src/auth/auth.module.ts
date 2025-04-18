@@ -17,6 +17,7 @@ import { PermissionsGuard } from './guards/role-permission.guard';
       }),
     })],
   controllers: [AuthController],
-  providers: [AuthService, accessTokenStrategy, RefreshTokenStrategy, RolesGuard, PermissionsGuard]
+  providers: [AuthService, accessTokenStrategy, RefreshTokenStrategy, RolesGuard, PermissionsGuard],
+  exports: [AuthService]
 })
 export class AuthModule { }
