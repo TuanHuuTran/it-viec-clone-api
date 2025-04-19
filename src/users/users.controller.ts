@@ -14,59 +14,58 @@ import { GetUser } from 'src/auth/decorator/auth.decorator';
 export class UsersController {
   constructor(private userService: UsersService) { }
 
-  @UseGuards(RolesGuard, PermissionsGuard)
-  @RequireRoles(RoleType.ADMIN)
-  @RequirePermission()
   @Post()
+  @UseGuards(RolesGuard)
+  @RequireRoles(RoleType.ADMIN)
   async create(@GetUser('sub') sub: string, @Body() createUserDto: CreateUserDTO) {
     return await this.userService.create(sub, createUserDto)
   }
 
+  @Get(':id')
   @UseGuards(PermissionsGuard)
   @RequirePermission('users:read')
-  @Get(':id')
   async findOne(@Param('id') id: string) {
     return await this.userService.findOne(id)
   }
 
+  @Get()
   @UseGuards(PermissionsGuard)
   @RequirePermission('users:read')
-  @Get()
   async findAll() {
     return await this.userService.findAll()
   }
 
+  @Patch(':id')
   @UseGuards(PermissionsGuard)
   @RequirePermission('users:update')
-  @Patch(':id')
   async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDTO) {
     return await this.userService.update(id, updateUserDto)
   }
 
+  @Delete(':id')
   @UseGuards(RolesGuard)
   @RequireRoles(RoleType.ADMIN)
-  @Delete(':id')
   async delete(@Param('id') id: string) {
     return await this.userService.remove(id)
   }
 
+  @Post(':id/roles')
   @UseGuards(RolesGuard)
   @RequireRoles(RoleType.ADMIN)
-  @Post(':id/roles')
   async assignRole(@GetUser('sub') sub: string, @Param('id') id: string, @Body() assignRoleDto: AssignRoleDTO) {
     return await this.userService.assignRole(sub, id, assignRoleDto)
   }
 
+  @Delete(':id/roles/:roleId')
   @UseGuards(RolesGuard)
   @RequireRoles(RoleType.ADMIN)
-  @Delete(':id/roles/:roleId')
   async removeRole(@Param('id') id: string, @Param('roleId') roleId: string) {
     return await this.userService.removeRole(id, roleId)
   }
 
+  @Get(':id/roles')
   @UseGuards(PermissionsGuard)
   @RequirePermission('users:read')
-  @Get(':id/roles')
   async getUserRoles(@Param('id') id: string) {
     return await this.userService.getUserRoles(id)
   }
