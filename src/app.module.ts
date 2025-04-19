@@ -5,12 +5,13 @@ import { UsersModule } from './users/users.module';
 import { ConfigModule } from '@nestjs/config';
 import { RoleModule } from './role/role.module';
 import { PermissionModule } from './permission/permission.module';
+import { UserRoleModule } from './user-role/user-role.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    PrismaModule, AuthModule, UsersModule, RoleModule, PermissionModule],
+    PrismaModule, AuthModule, UsersModule, RoleModule, PermissionModule, UserRoleModule],
 })
 export class AppModule { }
