@@ -12,12 +12,14 @@ import { EmployerRegistrationModule } from './employer-registration/employer-reg
 import { JobModule } from './job/job.module';
 import { LocationModule } from './location/location.module';
 import { DistrictModule } from './district/district.module';
+import { IndustryModule } from './industry/industry.module';
+import { SkillModule } from './skill/skill.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    PrismaModule, AuthModule, UsersModule, RoleModule, PermissionModule, UserRoleModule, RolePermissionModule, EmployerProfileModule, EmployerRegistrationModule, JobModule, LocationModule, DistrictModule],
+    PrismaModule, AuthModule, UsersModule, RoleModule, PermissionModule, UserRoleModule, RolePermissionModule, EmployerProfileModule, EmployerRegistrationModule, JobModule, LocationModule, DistrictModule, IndustryModule, SkillModule],
 })
 export class AppModule { }
