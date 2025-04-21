@@ -122,7 +122,7 @@ model EmployerProfile {
   facebookUrl String?
 
   // Thông tin tuyển dụng
-  // jobs Job[]
+  jobs Job[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -156,4 +156,157 @@ model EmployerRegistration {
   @@index([userId])
   @@index([status])
   @@map("employer_registrations")
+}
+
+enum JobLevel {
+  INTERN
+  FRESHER
+  JUNIOR
+  MIDDLE
+  SENIOR
+  LEADER
+  MANAGER
+  DIRECTOR
+  C_LEVEL
+}
+
+// Enum cho mô hình làm việc
+enum WorkingModel {
+  ONSITE
+  REMOTE
+  HYBRID
+}
+
+model Job {
+  id           String  @id @default(uuid())
+  title        String  @db.VarChar(255)
+  description  String  @db.Text
+  requirements String? @db.Text
+  benefits     String? @db.Text
+
+  // Các trường lọc trực tiếp
+  level        JobLevel // Fresher, Junior, etc.
+  minSalary    Float? // Mức lương tối thiểu
+  maxSalary    Float? // Mức lương tối đa
+  showSalary   Boolean      @default(false) // Có hiển thị lương hay không
+  workingModel WorkingModel // Onsite, Remote, Hybrid
+
+  // Các mối quan hệ lọc
+  location   Location @relation(fields: [locationId], references: [id])
+  locationId String
+  industry   Industry @relation(fields: [industryId], references: [id])
+  industryId String
+
+  // Các mối quan hệ nhiều-nhiều
+  skills    JobSkill[]
+  districts JobDistrict[]
+
+  // Các trường khác
+  employer   EmployerProfile @relation(fields: [employerId], references: [id], onDelete: Cascade)
+  employerId String
+  // applications JobApplication[]
+
+  // Metadata
+  isActive  Boolean  @default(true)
+  viewCount Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Indexes cho việc tìm kiếm và lọc
+  @@index([level])
+  @@index([workingModel])
+  @@index([minSalary, maxSalary])
+  @@index([locationId])
+  @@index([industryId])
+  @@index([isActive])
+  @@index([title]) // Fulltext search sẽ được cấu hình riêng
+  @@map("jobs")
+}
+
+// Mô hình địa điểm
+model Location {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  jobs      Job[]
+  districts District[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("locations")
+}
+
+// Mô hình quận/huyện
+model District {
+  id         String   @id @default(uuid())
+  name       String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  locationId String
+
+  jobs JobDistrict[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, locationId]) // Tên quận là duy nhất trong một thành phố
+  @@index([locationId])
+  @@map("districts")
+}
+
+// Bảng trung gian Job-District
+model JobDistrict {
+  id         String   @id @default(uuid())
+  job        Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  jobId      String
+  district   District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  districtId String
+
+  @@unique([jobId, districtId])
+  @@index([jobId])
+  @@index([districtId])
+  @@map("job_districts")
+}
+
+// Mô hình ngành nghề
+model Industry {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  description String?
+  jobs        Job[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("industries")
+}
+
+// Mô hình kỹ năng
+model Skill {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  description String?
+
+  jobs JobSkill[]
+  // candidates CandidateSkill[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("skills")
+}
+
+// Bảng trung gian Job-Skill
+model JobSkill {
+  id        String  @id @default(uuid())
+  job       Job     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  jobId     String
+  skill     Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  skillId   String
+  isPrimary Boolean @default(false) // Đánh dấu kỹ năng chính
+
+  @@unique([jobId, skillId])
+  @@index([jobId])
+  @@index([skillId])
+  @@index([isPrimary])
+  @@map("job_skills")
 }
