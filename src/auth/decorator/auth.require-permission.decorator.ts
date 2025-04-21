@@ -5,7 +5,7 @@ export type PermissionType =
   | 'applications:read' | 'applications:process' | 'applications:create'
   | 'users:read'
   | 'content:moderate' | 'users:create' | 'users:update' | 'roles:read' | 'permissions:read' | 'employers:create' | 'employers:read'
-  | 'locations:read'
+  | 'locations:read' | 'districts:read'
   ;
 
 export const RequirePermission = (...permissions: PermissionType[]) =>
