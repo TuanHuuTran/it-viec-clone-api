@@ -29,6 +29,7 @@ model User {
   roles                UserRole[]
   EmployerProfile      EmployerProfile?
   EmployerRegistration EmployerRegistration[]
+  CandidateProfile     CandidateProfile?
 
   @@map("users")
 }
@@ -207,10 +208,11 @@ model Job {
   // applications JobApplication[]
 
   // Metadata
-  isActive  Boolean  @default(true)
-  viewCount Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isActive       Boolean          @default(true)
+  viewCount      Int              @default(0)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  JobApplication JobApplication[]
 
   // Indexes cho việc tìm kiếm và lọc
   @@index([level])
@@ -289,8 +291,9 @@ model Skill {
   jobs JobSkill[]
   // candidates CandidateSkill[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  CandidateSkill CandidateSkill[]
 
   @@map("skills")
 }
@@ -309,4 +312,285 @@ model JobSkill {
   @@index([skillId])
   @@index([isPrimary])
   @@map("job_skills")
+}
+
+model CandidateProfile {
+  id     String @id @default(uuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+
+  // Thông tin cơ bản
+  title       String? // Ví dụ: "Senior Full Stack Developer"
+  bio         String?   @db.Text // About Me - Giới thiệu bản thân
+  phone       String?
+  dateOfBirth DateTime?
+  gender      String?
+  address     String?   @db.Text
+  location    String? // Thành phố/tỉnh hiện tại
+
+  // Avatar và thông tin hình ảnh
+  avatarUrl     String? // Đường dẫn đến avatar
+  coverImageUrl String? // Đường dẫn đến ảnh bìa (nếu có)
+
+  // Thông tin nghề nghiệp
+  currentPosition   String? // Vị trí hiện tại
+  yearsOfExperience Int? // Tổng số năm kinh nghiệm
+  careerLevel       String? // Junior, Middle, Senior, etc.
+
+  // Mức lương mong muốn
+  expectedSalary     Float?
+  salaryCurrency     String? // VND, USD, etc.
+  showExpectedSalary Boolean @default(false)
+
+  // Thông tin tìm việc
+  isOpenToWork          Boolean @default(true)
+  preferredWorkingModel String? // ONSITE, REMOTE, HYBRID
+
+  // Các liên kết mạng xã hội
+  linkedinUrl  String?
+  githubUrl    String?
+  portfolioUrl String?
+
+  // Các mối quan hệ 1-nhiều
+  educations      Education[]
+  workExperiences WorkExperience[]
+  skills          CandidateSkill[]
+  projects        Project[]
+  certificates    Certificate[]
+  awards          Award[]
+
+  // Các mối quan hệ khác
+  applications JobApplication[]
+  resumes      Resume[]
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("candidate_profiles")
+}
+
+// Bảng trung gian Candidate-Skill
+model CandidateSkill {
+  id                String           @id @default(uuid())
+  candidate         CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidateId       String
+  skill             Skill            @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  skillId           String
+  yearsOfExperience Int? // Số năm kinh nghiệm với kỹ năng này
+  proficiencyLevel  String? // Mức độ thành thạo (Beginner, Intermediate, Advanced, Expert)
+
+  @@unique([candidateId, skillId])
+  @@index([candidateId])
+  @@index([skillId])
+  @@map("candidate_skills")
+}
+
+//---------------------------------------------------
+// Phần CV và thông tin chi tiết ứng viên
+//---------------------------------------------------
+
+// Mô hình Học vấn
+model Education {
+  id          String           @id @default(uuid())
+  candidate   CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidateId String
+
+  institution  String // Tên trường/tổ chức giáo dục
+  degree       String? // Bằng cấp (Cử nhân, Thạc sĩ, etc.)
+  fieldOfStudy String? // Ngành học
+  startDate    DateTime
+  endDate      DateTime? // Null nếu đang học
+  isCurrently  Boolean   @default(false)
+  description  String?   @db.Text
+  gpa          Float? // Điểm trung bình (nếu có)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([candidateId])
+  @@map("educations")
+}
+
+// Mô hình Kinh nghiệm làm việc
+model WorkExperience {
+  id          String           @id @default(uuid())
+  candidate   CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidateId String
+
+  company          String // Tên công ty
+  position         String // Vị trí công việc
+  location         String? // Địa điểm làm việc
+  startDate        DateTime
+  endDate          DateTime? // Null nếu đang làm việc
+  isCurrently      Boolean   @default(false)
+  description      String?   @db.Text
+  responsibilities String?   @db.Text
+  technologiesUsed String? // Các công nghệ sử dụng, có thể lưu dạng JSON
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([candidateId])
+  @@map("work_experiences")
+}
+
+// Mô hình Dự án nổi bật
+model Project {
+  id          String           @id @default(uuid())
+  candidate   CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidateId String
+
+  name             String // Tên dự án
+  role             String? // Vai trò trong dự án
+  startDate        DateTime
+  endDate          DateTime? // Null nếu đang làm
+  isCurrently      Boolean        @default(false)
+  description      String?        @db.Text
+  technologiesUsed String? // Các công nghệ sử dụng, có thể lưu dạng JSON
+  projectUrl       String? // Link đến dự án (nếu có)
+  githubUrl        String? // Link đến mã nguồn (nếu có)
+  images           ProjectImage[] // Các hình ảnh minh họa
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([candidateId])
+  @@map("projects")
+}
+
+// Mô hình Hình ảnh dự án
+model ProjectImage {
+  id        String  @id @default(uuid())
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  imageUrl   String
+  caption    String?
+  orderIndex Int     @default(0) // Vị trí hiển thị
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@map("project_images")
+}
+
+// Mô hình Chứng chỉ
+model Certificate {
+  id          String           @id @default(uuid())
+  candidate   CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidateId String
+
+  name           String // Tên chứng chỉ
+  organization   String // Tổ chức cấp chứng chỉ
+  issueDate      DateTime
+  expirationDate DateTime? // Null nếu không hết hạn
+  credentialId   String? // Mã số chứng chỉ
+  credentialUrl  String? // Link xác thực chứng chỉ (nếu có)
+  description    String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([candidateId])
+  @@map("certificates")
+}
+
+// Mô hình Giải thưởng
+model Award {
+  id          String           @id @default(uuid())
+  candidate   CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidateId String
+
+  title        String // Tên giải thưởng
+  issuer       String // Tổ chức trao giải
+  dateReceived DateTime
+  description  String?  @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([candidateId])
+  @@map("awards")
+}
+
+// Mô hình CV - cho phép người dùng tạo nhiều phiên bản CV
+model Resume {
+  id          String           @id @default(uuid())
+  candidate   CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidateId String
+
+  name      String // Tên CV (ví dụ: "CV cho vị trí Frontend")
+  isDefault Boolean @default(false) // CV mặc định
+
+  // Thông tin thành phần được bao gồm trong CV (có thể tùy chỉnh)
+  includeEducation      Boolean @default(true)
+  includeWorkExperience Boolean @default(true)
+  includeSkills         Boolean @default(true)
+  includeProjects       Boolean @default(true)
+  includeCertificates   Boolean @default(true)
+  includeAwards         Boolean @default(true)
+
+  // Lưu trữ tùy chỉnh cho từng phần (có thể lưu dưới dạng JSON)
+  customizations Json?
+
+  // Đường dẫn đến file PDF đã tạo (nếu có)
+  pdfUrl String?
+
+  // Các mối quan hệ
+  applications JobApplication[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([candidateId])
+  @@map("resumes")
+}
+
+//---------------------------------------------------
+// Phần ứng tuyển
+//---------------------------------------------------
+
+// Mô hình Ứng tuyển
+model JobApplication {
+  id          String           @id @default(uuid())
+  job         Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  jobId       String
+  candidate   CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidateId String
+  resume      Resume?          @relation(fields: [resumeId], references: [id])
+  resumeId    String?
+
+  status      String  @default("PENDING") // PENDING, REVIEWING, ACCEPTED, REJECTED
+  coverLetter String? @db.Text
+
+  // Metadata về quá trình ứng tuyển
+  appliedAt   DateTime @default(now())
+  lastUpdated DateTime @updatedAt
+
+  // Log các hoạt động liên quan đến ứng tuyển
+  applicationLogs ApplicationLog[]
+
+  @@unique([jobId, candidateId]) // Mỗi ứng viên chỉ có thể ứng tuyển 1 lần vào mỗi công việc
+  @@index([jobId])
+  @@index([candidateId])
+  @@index([resumeId])
+  @@map("job_applications")
+}
+
+// Mô hình Log ứng tuyển
+model ApplicationLog {
+  id            String         @id @default(uuid())
+  application   JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  applicationId String
+
+  status    String // Trạng thái mới
+  note      String? @db.Text
+  changedBy String // ID của người thay đổi trạng thái
+
+  createdAt DateTime @default(now())
+
+  @@index([applicationId])
+  @@map("application_logs")
 }
